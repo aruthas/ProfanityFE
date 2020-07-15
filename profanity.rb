@@ -561,10 +561,12 @@ for arg in ARGV
 		exit
 	elsif arg =~ /^\-\-port=([0-9]+)$/
 		PORT = $1.to_i
-	elsif arg =~ /^\-\-default\-color\-id=([0-9]+)$/
+	elsif arg =~ /^\-\-default\-color\-id=(-?[0-9]+)$/
 		DEFAULT_COLOR_ID = $1.to_i
-	elsif arg =~ /^\-\-default\-background\-color\-id=([0-9]+)$/
+	elsif arg =~ /^\-\-default\-background\-color\-id=(-?[0-9]+)$/
 		DEFAULT_BACKGROUND_COLOR_ID = $1.to_i
+	elsif arg =~ /^\-\-use\-default\-colors$/
+		USE_DEFAULT_COLORS = true
 	elsif arg =~ /^\-\-custom\-colors=(on|off|yes|no)$/
 		fix_setting = { 'on' => true, 'yes' => true, 'off' => false, 'no' => false }
 		CUSTOM_COLORS = fix_setting[$1]
@@ -577,7 +579,32 @@ for arg in ARGV
 	end
 end
 
-file_name = "profanity#{LOG_FILENAME || PORT}-game.log"
+unless defined?(PORT)
+	PORT = 8000
+end
+unless defined?(LOG_FILENAME)
+	LOG_FILENAME = PORT
+end
+unless defined?(DEFAULT_COLOR_ID)
+	DEFAULT_COLOR_ID = 7
+end
+unless defined?(DEFAULT_BACKGROUND_COLOR_ID)
+	DEFAULT_BACKGROUND_COLOR_ID = 0
+end
+if defined?(USE_DEFAULT_COLORS)
+	Curses.use_default_colors
+end
+unless defined?(SETTINGS_FILENAME)
+	SETTINGS_FILENAME = File.expand_path('~/.profanity.xml')
+end
+unless defined?(CUSTOM_COLORS)
+	CUSTOM_COLORS = Curses.can_change_color?
+end
+
+DEFAULT_COLOR_CODE = Curses.color_content(DEFAULT_COLOR_ID).collect { |num| ((num/1000.0)*255).round.to_s(16) }.join('').rjust(6, '0')
+DEFAULT_BACKGROUND_COLOR_CODE = Curses.color_content(DEFAULT_BACKGROUND_COLOR_ID).collect { |num| ((num/1000.0)*255).round.to_s(16) }.join('').rjust(6, '0')
+
+file_name = "profanity#{LOG_FILENAME}-game.log"
 logger = Logger.new(File.join(LOG_DIR, file_name), 'daily')
 
 logger.formatter = proc do |_, datetime, _, msg|
@@ -589,25 +616,6 @@ logger.sev_threshold = Logger::INFO
 def log(value)
 		File.open('profanity.log', 'a') { |f| f.puts value }
 end
-
-unless defined?(PORT)
-	PORT = 8000
-end
-unless defined?(DEFAULT_COLOR_ID)
-	DEFAULT_COLOR_ID = 7
-end
-unless defined?(DEFAULT_BACKGROUND_COLOR_ID)
-	DEFAULT_BACKGROUND_COLOR_ID = 0
-end
-unless defined?(SETTINGS_FILENAME)
-	SETTINGS_FILENAME = File.expand_path('~/.profanity.xml')
-end
-unless defined?(CUSTOM_COLORS)
-	CUSTOM_COLORS = Curses.can_change_color?
-end
-
-DEFAULT_COLOR_CODE = Curses.color_content(DEFAULT_COLOR_ID).collect { |num| ((num/1000.0)*255).round.to_s(16) }.join('').rjust(6, '0')
-DEFAULT_BACKGROUND_COLOR_CODE = Curses.color_content(DEFAULT_BACKGROUND_COLOR_ID).collect { |num| ((num/1000.0)*255).round.to_s(16) }.join('').rjust(6, '0')
 
 unless File.exists?(SETTINGS_FILENAME)
 
